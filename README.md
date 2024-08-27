@@ -1,7 +1,7 @@
 
 ## Título: Bone marrow transplant: children Data Set. Análisis Predictivo de Trasplante de Médula Ósea en Pacientes Pediátricos
 
-Este proyecto explora un análisis de datos clínicos sobre trasplantes de médula ósea en pacientes pediátricos con enfermedades hematológicas malignas y no malignas. Utilizamos modelos de regresión logística y Random Forest para predecir la recaída post-trasplante en los pacientes.
+Este repositorio contiene el proyecto realizado en la asignatura Análisis Avanzado de Datos Clínicos del grado de Ingeniería de la Salud. El proyecto explora un análisis de datos clínicos sobre trasplantes de médula ósea en pacientes pediátricos con enfermedades hematológicas malignas y no malignas. Utilizamos modelos de regresión logística y Random Forest para predecir la recaída post-trasplante en los pacientes.
 
 ## 1. Descripción
 
