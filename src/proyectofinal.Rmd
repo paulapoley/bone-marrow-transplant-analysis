@@ -1,0 +1,337 @@
+---
+title: "Proyecto Análisis. Bone marrow transplant: children Data Set "
+output: html_notebook
+---
+
+-------------------------------------------------------------------------------
+    INSTALACIÓN DE PAQUETES
+-------------------------------------------------------------------------------
+
+```{r}
+#install.packages("ggplot2")
+#install.packages("lattice")
+#install.packages("gridExtra")
+#install.packages("randomForest")
+#install.packages("dplyr")
+#install.packages("ROCR")
+#install.packages("rpart")
+#install.packages("rpart.plot")
+
+library(rpart)
+library(caret)
+library(dplyr)
+library(gapminder)
+library(ggplot2)
+library(gridExtra)
+library(randomForest)
+library(class)
+library(caTools)
+library(ROCR)
+library(tidyverse)
+library(rpart.plot)
+```
+
+-------------------------------------------------------------------------------
+    CARGA DE DATOS 
+-------------------------------------------------------------------------------
+Lectura del fichero:
+```{r}
+alldatos<-read.delim("datosMedulaOsea.csv", sep =",", head=TRUE)
+alldatos
+```
+
+Eliminación de la columna HLAgrl porque lo números que salen no se corresponden con los valores categóricos que se muestra en la página de UCI. Y ponemos la función view para ver el nuevo conjunto de datos menos la columna que hemos seleccionado (HLAgrl) que se encuentra en la columna número 22.  
+```{r}
+datos<-alldatos[,-c(22)]
+```
+
+Podemos ver todo los nombres de las columnas.
+```{r}
+names(datos)
+```
+
+```{r}
+colSums(is.na(datos))
+```
+
+Si usamos la función str, podemos ver o explorar la estructura del dataframe que contiene el conjunto de datos. Como podemos ver en la línea superior 'data.frame': , el conjunto de datos tiene 187 observaciones y 36 variables en cada una (ya que anteriormente hemos eliminado una). También podemos ver que tenemos registros int (números enteros), num(numérico), chr (carácter)
+```{r}
+str(datos)
+```
+
+Como estamos con clasificación nuestras variables a predecir son variables categóricas. Vamos entonces a convertir estas variables con la información dada.
+```{r}
+datos$sexo.del.receptor<-factor(datos$sexo.del.receptor, levels=c("0","1"),labels=c("Femenino","Masculino"))
+datos$fuente.de.celulas.madre<-factor(datos$fuente.de.celulas.madre, levels=c("0","1"),labels=c("Médula ósea","Sangre periférica"))
+datos$donante.35<-factor(datos$donante.35,levels=c("0","1"),labels=c("Menor de 35 años","Mayor o igual a 35 años"))
+datos$IIIV<-factor(datos$IIIV, levels=c("0","1"),labels=c("No","Si"))
+datos$compatibilidad.de.genero<-factor(datos$compatibilidad.de.genero, levels=c("0","1"),labels=c("Masculino a Femenino","Femenino a Masculino"))
+datos$donante.ABO<-factor(datos$donante.ABO, levels=c("-1","0","1","2"),labels=c("B","O","A","AB"))
+datos$receptor.ABO<-factor(datos$receptor.ABO, levels=c("-1","0","1","2"),labels=c("B","O","A","AB"))
+datos$receptor.Rh<-factor(datos$receptor.Rh, levels=c("0","1"),labels=c("Rh-","Rh+"))
+datos$coincidencia.ABO<-factor(datos$coincidencia.ABO, levels=c("0","1"),labels=c("No emparejados","Si emparejado"))
+datos$CMV.del.donante<-factor(datos$CMV.del.donante, levels=c("0","1"),labels=c("Ausencia de infección","Presencia de infección"))
+datos$CMV.del.receptor<-factor(datos$CMV.del.receptor, levels=c("0","1"),labels=c("Ausencia de infección","Presencia de infección"))
+datos$grupo.de.riesgo<-factor(datos$grupo.de.riesgo, levels=c("0","1"),labels=c("Bajo riesgo","Alto riesgo"))
+datos$Txpost.recaida<-factor(datos$Txpost.recaida, levels=c("0","1"),labels=c("No","Si"))
+datos$grupo.de.enfermedad<-factor(datos$grupo.de.enfermedad, levels=c("0","1"),labels=c("No maligna","Maligna"))
+datos$coincidencia.HLA<-factor(datos$coincidencia.HLA, levels=c("0","1","2","3"),labels=c(" 10/10","9/10", "8/10", "7/10"))
+datos$discrepancia.de.HLA<-factor(datos$discrepancia.de.HLA, levels=c("0","1"),labels=c(" Coincidencia de HLA","Discrepancia de HLA"))
+datos$antigeno<-factor(datos$antigeno, levels=c("-1","0","1"),labels=c("Sin diferencias","Con 1 diferencia", "Con 2 o 3 diferencias"))
+datos$alelo<-factor(datos$alelo, levels=c("-1","0","1"),labels=c(" Sin diferencias","Con 1 diferencia", "Con 2,3 o 4 diferencias "))
+datos$receptor.10<-factor(datos$receptor.10, levels=c("0","1"),labels=c(" Menos de 10 años","!0 o más años"))
+datos$agente.del.receptor<-factor(datos$agente.del.receptor, levels=c("0","1","2"),labels=c(" De 0 a 5 años inclusive","De 5 a 10 años inclusive", "De 10 a 20 años inclusive"))
+datos$recaida<-factor(datos$recaida, levels=c("0","1"),labels=c("No","Si"))
+datos$aGvHDIIIIV<-factor(datos$aGvHDIIIIV, levels=c("0","1"),labels=c("Si","No"))
+datos$extcGvHD<-factor(datos$extcGvHD, levels=c("0","1"),labels=c("Si","No"))
+datos$estado.de.supervivencia<-factor(datos$estado.de.supervivencia, levels=c("0","1"),labels=c("Vivo","Muerto"))
+
+```
+
+
+Con la función summary podemos tener un resumen estadístico de las variables del dataset, es decir, hacemos un sumario de los datos para verlos facilmente y comprobar errores. 
+```{r}
+summary(datos)
+```
+
+Podemos representar variables del conjunto de datos gráficamente y mediante la observación de la nube de puntos ver a groso modo si existe correlación.
+
+1.Vamos a ver el tiempo de supervivencia del receptor con la dosis de células CD·4+ por kg de peso corporal del receptor. 
+```{r}
+plot(datos$CD34kgx10d6,datos$tiempo.de.supervivenci, col = "purple",
+     main = "Tiempo de supervivencia /dosis de células CD-4+")
+```
+
+plot(autompg8$Mpg~autompg8$Weight)
+abline(fit4,col="red") 
+
+2.Vamos a ver el tiempo de supervivencia del receptor con la masa corporal del receptor de células madre hematopoyéticas en el momento del trasplante.
+```{r}
+plot(datos$masa.corporal,datos$tiempo.de.supervivencia, col = "green",
+     main = "Tiempo de superviviencia/masa corporal")
+```
+
+3.Vamos a ver la edad del receptor de células madres hematopoyéticas en el momento del trasplante con la masa corporal del receptor de células madre hematopoyéticas en el momento del trasplante.
+```{r}
+plot(datos$edad.del.receptor,datos$masa.corporal, col = "red",
+     main = "Edad/masa corporal")
+
+```
+
+Gráfico de la recaída, es decir de la reaparición de la enfermedad con respecto el sexo del receptor. 
+
+```{r}
+graf1<-datos%>%
+ ggplot(aes(x=sexo.del.receptor, fill=recaida))+
+ geom_bar()
+graf1
+```
+
+
+Gráfico del estado de supervivencia de la enfermedad con respecto de si el receptor ha tenido una recaída.
+
+```{r}
+graf2<-datos%>%
+ ggplot(aes(x=estado.de.supervivencia, fill=recaida))+
+ geom_bar()
+graf2
+```
+
+Gráfico del estado de supervivencia de la enfermedad con respecto del sexo del receptor. 
+```{r}
+graf3<-datos%>%
+ ggplot(aes(x=estado.de.supervivencia, fill=sexo.del.receptor))+
+ geom_bar()
+graf3
+```
+
+Gráfico de la presencia de infección por citomegalovirus en el donante de células madres hematopoyéticas antes del trasplante con respecto la edad del donante.
+```{r}
+graf4<-datos%>%
+ ggplot(aes(x=CMV.del.donante, fill=donante.35))+
+ geom_bar()
+graf4
+```
+
+Gráfico de la fuente de células madre hematopoyéticas con respecto el sexo
+```{r}
+graf5<-datos%>%
+ ggplot(aes(x=fuente.de.celulas.madre, fill=sexo.del.receptor))+
+ geom_bar()
+graf5
+```
+
+Gráfico del tipo de enfermedad con respecto el segundo trasplante de médula ósea después de la recaída.
+```{r}
+graf6<-datos%>%
+ ggplot(aes(x=enfermedad, fill=Txpost.recaida))+
+ geom_bar()
+graf6
+```
+
+Gráfico del segundo trasplante de médula ósea después de la recaída con respecto a la reaparición de la enfermedad 
+```{r}
+graf7<-datos%>%
+ ggplot(aes(x=estado.de.supervivencia, fill=Txpost.recaida))+
+ geom_bar()
+graf7
+
+```
+
+Gráfico del grupo sanguíneao ABO del receptor de células madre hematopoyéticas con respecto el estado de supervivencia.
+```{r}
+graf8<-datos%>%
+ ggplot(aes(x=receptor.ABO, fill=estado.de.supervivencia))+
+ geom_bar()
+graf8
+```
+
+
+Gráfico del grupo sanguíneao ABO del receptor de células madre hematopoyéticas con respecto el sexo del receptor. 
+```{r}
+graf9<-datos%>%
+ ggplot(aes(x=receptor.ABO, fill=sexo.del.receptor))+
+ geom_bar()
+graf9
+```
+
+Gráfico de la compatibilidad del donante y receptor según su género con respecto el grupo de riesgo.
+```{r}
+graf10<-datos%>%
+ ggplot(aes(x=compatibilidad.de.genero, fill=grupo.de.riesgo))+
+ geom_bar()
+graf10
+```
+
+Gráfico de la coincidencia de HLA(antígenos leucocitarios humanos) con respecto el tipo de enfermedad.
+```{r}
+graf11<-datos%>%
+ ggplot(aes(x=discrepancia.de.HLA, fill=grupo.de.enfermedad))+
+ geom_bar()
+graf11
+```
+
+Gráfico del grupo sanguíneo ABO del donante de células madre hematopoyéticascon respecto a la edad de este.
+```{r}
+graf12<-datos%>%
+ ggplot(aes(x=donante.ABO, fill=donante.35))+
+ geom_bar()
+graf12
+```
+
+Training and test. Dividimos de forma aleatoriamente nuestro conjunto de datos en un conjunto de entrenamiento (para crear un modelo de predicción), y otro conjunto de test (para ver como de bueno es ese modelo).
+
+```{r}
+mini_datos<-datos[c("sexo.del.receptor", "recaida", "estado.de.supervivencia", "enfermedad","Txpost.recaida","grupo.de.riesgo")]
+```
+
+```{r}
+str(mini_datos)
+```
+
+```{r}
+dimension<-dim(mini_datos[1])
+dimension
+```
+
+```{r}
+training<- 0.80*dimension
+training
+```
+
+```{r}
+ec1 = sort(sample(1:dimension, size=training, replace=FALSE))
+
+```
+
+```{r}
+train<-mini_datos[ec1,]
+dim(train)
+```
+
+```{r}
+test<-mini_datos[ec1,]
+dim(test)
+```
+Regresión logística
+```{r}
+Regresion_logistica <- glm(recaida ~ ., family = binomial, data =mini_datos)
+summary(Regresion_logistica)
+```
+
+```{r}
+prediccion1<- predict.glm(Regresion_logistica,newdata = test, type="response")
+tabla<- table(test$recaida, floor(prediccion1+0.5))
+tabla
+```
+
+Curva ROC
+```{r}
+prediccion1 <- ROCR::prediction(prediccion1,test$recaida)
+falsos_posi <- performance(prediccion1, "tpr", "fpr")
+plot(falsos_posi)
+```
+Como podemos ver el modelo que nos sale no es que sea muy bueno pero esta bien.
+```{r}
+AUc=performance(prediccion1, measure = "auc")@y.values[[1]]
+cat("AUC: ",AUc,"n")
+```
+
+
+RANDOM FOREST
+```{r}
+randomf <- randomForest(recaida~.,data = test,ntree = 500,mtry = 4)
+randomf
+```
+
+```{r}
+pred1_rf <- predict(randomf, newdata = test[,-12])
+matriz <- confusionMatrix(test$recaida,pred1_rf)
+matriz
+```
+
+```{r}
+prediccion_rf <-predict(randomf,newdata = test[,-12],type = 'prob')
+prediccion_rf <- prediccion_rf[,2]
+pred_rf<-prediction(prediccion_rf, test$recaida)
+pred_rf
+```
+Curva ROC
+```{r}
+falsos_randomf <- performance(pred_rf, "tpr", "fpr")
+plot(falsos_randomf, main="ROC-Random Forest", col = "orange")
+
+```
+Aunque ha dado bastante similares, este (Random forest) es mejor puesto que esta con un área bajo la curva de 0.8916... y el otro (Regresión logística) de 0.8146998 aunque de todas maneras este no es que sea totalmente muy bueno.
+
+```{r}
+AUC_randomf=performance(pred_rf, measure = "auc")@y.values[[1]]
+cat("AUC: ",AUC_randomf,"n")
+
+```
+
+Comparación de las dos curvas ROC
+```{r}
+par(mfrow=c(1,2))
+plot(falsos_posi, main="Curva-ROC Regresión Logística",col = "yellow")
+plot(falsos_randomf, main="Curva-ROC Random Forest",col = "purple")
+```
+
+Podemos visualizar el conjunto de datos más pequeño que vamos a crear (m_datos). Gpairs nos ofrece mucha información.
+
+```{r}
+m_datos<-datos[c( "recaida", "estado.de.supervivencia", "enfermedad")]
+```
+
+```{r}
+#install.packages("GGally")
+library(GGally)
+ggpairs(m_datos)
+```
+
+
+
+
+
+
+
