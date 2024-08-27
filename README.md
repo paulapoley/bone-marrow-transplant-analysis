@@ -37,7 +37,7 @@ La carpeta /src contiene los scripts y proyectos relacionados con el análisis:
 ### 3.3. Documentos (docs)
 La carpeta /docs incluye documentos y gráficos generados:
 
--**Presentación del Trabajo:** [Bone-marrow-transplant.pdf](src/Bone-marrow-transplant.pdf) - PDF con la presentación del trabajo.
+-**Presentación del Trabajo:** [Bone-marrow-transplant.pdf](docs/Bone-marrow-transplant.pdf) - PDF con la presentación del trabajo.
 
 ### 3.4. Archivo Adicional
 Además, el repositorio incluye un archivo relevante:
